@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IntrPlan – Profesionální Plánovač</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        
+        <!-- HLAVNÍ OBSAH -->
+        <main class="content">
+            
+            <!-- 1. OBRAZOVKA: DNES (Agenda View) -->
+            <section id="tab-dnes" class="tab-content active">
+                <div class="date-header" id="current-date-text">PONDĚLÍ 21. ZÁŘÍ</div>
+                
+                <!-- MOTIVAČNÍ / CÍLOVÝ WIDGET -->
+                <div class="daily-quote-card" id="daily-quote-box">
+                    <i class="fa-solid fa-quote-left" style="color: #38bdf8; margin-bottom: 4px;"></i>
+                    <p id="daily-quote-text" style="font-size: 0.85rem; color: #cbd5e1; font-style: italic;">„Jediný špatný den je ten, ze kterého si nic odneseš.“</p>
+                </div>
+
+                <!-- BANNER PRO NEDĚLNÍ NASTAVENÍ -->
+                <div id="ritual-banner-container" class="ritual-banner hidden">
+                    <h2>🌟 Nedělní nastavení týdne</h2>
+                    <p>Naplánuj si týdenní výzvy a rozděl je do dnů.</p>
+                    <button class="btn-primary-big" onclick="openSundayModal(true)">Spustit nastavení</button>
+                </div>
+
+                <div id="daily-content-view">
+                    <div class="global-streak-card">
+                        <div class="streak-number" id="global-streak">🔥 0 SPLNĚNÝCH</div>
+                        <div class="streak-desc" id="streak-status-desc">„Přehledný denní harmonogram.“</div>
+                    </div>
+
+                    <div class="daily-progress-box">
+                        <span id="missions-status-text">Splněno úkolů: 0 / 0</span>
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="btn-small" style="background: #0284c7;" onclick="forceRefreshDay()">🔄 Obnovit</button>
+                            <button class="btn-small" onclick="openQuickTaskModal()">+ Úkol</button>
+                            <button class="btn-small" onclick="openSundayModal(false)">⚙️ Nastavení</button>
+                        </div>
+                    </div>
+
+                    <!-- Rychlé akce pro speciální dny / záchrannou brzdu -->
+                    <div style="display: flex; gap: 6px; margin-bottom: 15px;">
+                        <button class="btn-small" style="flex: 1; background: #334155; font-size: 0.75rem;" onclick="openDayPresetModal()">⚡ Šablona dne</button>
+                        <button class="btn-small" style="flex: 1; background: #334155; font-size: 0.75rem;" onclick="toggleSickDay()" id="sick-day-btn">🛌 Volno / Nemoc</button>
+                    </div>
+
+                    <!-- Seznam denních úkolů (Agenda) -->
+                    <div class="agenda-container" id="agenda-container"></div>
+                </div>
+            </section>
+
+            <!-- 2. OBRAZOVKA: TÝDEN (Sloupce dnů) -->
+            <section id="tab-tyden" class="tab-content">
+                <h2>Týdenní přehled</h2>
+                <p class="section-subtitle">Pevné bloky, výzvy i úkoly v jednotlivých dnech.</p>
+                <div class="week-columns-container" id="week-columns-container"></div>
+            </section>
+
+            <!-- 3. OBRAZOVKA: CÍLE A ROZVRH -->
+            <section id="tab-cile" class="tab-content">
+                <h2>Týdenní výzvy & Rozvrh</h2>
+                <p class="section-subtitle">Tvůj prostor pro růst a vize.</p>
+                
+                <button class="btn-primary-big" style="margin-top: 10px; margin-bottom: 15px; background: #8b5cf6;" onclick="openLongTermModal()">+ Přidat dlouhodobý cíl</button>
+                
+                <h3 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 8px;">Dlouhodobé cíle</h3>
+                <div id="long-term-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;"></div>
+
+                <h3 style="font-size: 0.9rem; color: #94a3b8; margin-bottom: 8px;">Aktivní týdenní vize</h3>
+                <div id="weekly-vision-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
+
+                <h2 style="margin-top: 30px;">Správa stálého rozvrhu</h2>
+                <button class="btn-small" style="margin-top: 8px;" onclick="openBlockModal()">+ Přidat pevný blok</button>
+                <div id="blocks-list-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
+            </section>
+
+            <!-- 4. OBRAZOVKA: STATISTIKY -->
+            <section id="tab-statistiky" class="tab-content">
+                <h2>Statistiky & Pokrok</h2>
+                
+                <div class="stats-summary">
+                    <div class="stat-box"><strong id="stat-total">0</strong><span>splněno celkem</span></div>
+                    <div class="stat-box"><strong id="stat-streak-stat">0 dní</strong><span>aktuální série</span></div>
+                </div>
+
+                <div id="advanced-stats-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;"></div>
+
+                <h3>Měsíční aktivita</h3>
+                <div class="github-heatmap" id="heatmap-container"></div>
+
+                <h3 style="margin-top: 25px;">🏆 Dokončené vize (Síň slávy)</h3>
+                <div id="completed-visions-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px; margin-bottom: 30px;"></div>
+            </section>
+
+            <!-- 5. OBRAZOVKA: PROFIL -->
+            <section id="tab-profil" class="tab-content">
+                <h2>Můj Profil & Nastavení</h2>
+                
+                <div class="stat-box-long" style="margin-top: 15px; background: #172033; border: 1px solid #334155;">
+                    <strong style="color: #38bdf8; margin-bottom: 4px; display: block;"><i class="fa-solid fa-user-shield"></i> Moje statistiky</strong>
+                    <div style="font-size: 0.85rem; display: flex; flex-direction: column; gap: 4px; color: #cbd5e1;">
+                        <div style="display: flex; justify-content: space-between;"><span>Celkem splněno úkolů:</span><strong id="profile-total-done" style="color: #3b82f6;">0</strong></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Dokončené vize:</span><strong id="profile-total-visions" style="color: #10b981;">0</strong></div>
+                        <div style="display: flex; justify-content: space-between;"><span>Odpracováno času:</span><strong id="profile-total-mins" style="color: #f59e0b;">0 min</strong></div>
+                    </div>
+                </div>
+
+                <div class="stat-box-long" style="margin-top: 12px; background: #172033; border: 1px solid #334155;">
+                    <strong style="color: #38bdf8; margin-bottom: 6px; display: block;"><i class="fa-solid fa-pen"></i> Osobní údaje</strong>
+                    <label style="font-size: 0.75rem; color: #94a3b8; display: block;">Jméno / Přezdívka</label>
+                    <input type="text" id="profile-input-name" placeholder="Např. Jan Novák" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; margin-top: 2px; margin-bottom: 8px; font-size: 0.85rem;">
+
+                    <label style="font-size: 0.75rem; color: #94a3b8; display: block;">Obor / Role</label>
+                    <input type="text" id="profile-input-role" placeholder="Např. 3. ročník IT" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; margin-top: 2px; margin-bottom: 8px; font-size: 0.85rem;">
+
+                    <label style="font-size: 0.75rem; color: #94a3b8; display: block;">Vlastní motto / Citát dne</label>
+                    <input type="text" id="profile-input-motto" placeholder="Např. Nikdy se nevzdávej!" style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; margin-top: 2px; margin-bottom: 10px; font-size: 0.85rem;">
+
+                    <button class="btn-small" style="width: 100%; background: #3b82f6;" onclick="saveProfileSettings()">Uložit profil</button>
+                </div>
+
+                <div class="stat-box-long" style="margin-top: 12px; background: #172033; border: 1px solid #334155;">
+                    <strong style="color: #38bdf8; margin-bottom: 6px; display: block;"><i class="fa-solid fa-database"></i> Správa dat & Záloha</strong>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-small" style="flex: 1; background: #0284c7;" onclick="exportData()">📥 Export dat</button>
+                        <label class="btn-small" style="flex: 1; background: #059669; text-align: center; cursor: pointer; padding-top: 7px;">
+                            📤 Import dat <input type="file" id="import-file-input" style="display: none;" onchange="importData(event)">
+                        </label>
+                    </div>
+                </div>
+
+                <button class="btn-primary-big" style="background: #3b82f6; margin-top: 15px;" onclick="openSundayModal(false)">Spustit nedělní nastavení</button>
+                <button class="btn-complete" style="margin-top: 10px; background: #ef4444;" onclick="resetAllData()">Smazat vše a restartovat</button>
+            </section>
+
+        </main>
+
+        <!-- MODÁLNÍ OKNA -->
+        <div id="preset-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚡ Rychlé šablony dne</h2>
+                    <span class="close-btn" onclick="closeDayPresetModal()">&times;</span>
+                </div>
+                <p class="modal-desc">Vyber si předpřipravený režim pro dnešní den:</p>
+                <div class="ritual-layout">
+                    <button class="btn-primary-big" style="background: #3b82f6; margin-top: 0;" onclick="applyPreset('domu')">🎒 Páteční odjezd domů</button>
+                    <button class="btn-primary-big" style="background: #8b5cf6;" onclick="applyPreset('volno')">🛋️ Víkendový volný den</button>
+                    <button class="btn-primary-big" style="background: #0284c7;" onclick="applyPreset('intrak')">🏫 Standardní den na intru</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="long-term-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎯 Nový dlouhodobý cíl</h2>
+                    <span class="close-btn" onclick="closeLongTermModal()">&times;</span>
+                </div>
+                <div class="ritual-layout">
+                    <div class="ritual-form">
+                        <label style="font-size: 0.8rem; color: #8b5cf6; font-weight: bold;">Název cíle</label>
+                        <input type="text" id="input-lt-title" placeholder="Např. Uběhnout 5 km">
+                        
+                        <label style="font-size: 0.8rem; color: #8b5cf6; font-weight: bold; margin-top: 10px; display: block;">Kategorie</label>
+                        <select id="input-lt-cat">
+                            <option value="škola">Škola & Studium</option>
+                            <option value="zdraví">Zdraví & Sport</option>
+                            <option value="osobní">Osobní & Pokoj</option>
+                            <option value="práce">Práce & Finance</option>
+                            <option value="rozvoj">Osobní rozvoj & Mysl</option>
+                        </select>
+
+                        <label style="font-size: 0.8rem; color: #8b5cf6; font-weight: bold; margin-top: 10px; display: block;">Termín (Do kdy)</label>
+                        <input type="date" id="input-lt-deadline">
+
+                        <button class="btn-primary-big" style="background: #8b5cf6;" onclick="saveLongTermGoal()">Uložit cíl</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="quick-task-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>⚡ Rychlý úkol</h2>
+                    <span class="close-btn" onclick="closeQuickTaskModal()">&times;</span>
+                </div>
+                <div class="ritual-layout">
+                    <div class="ritual-form">
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold;">Co je potřeba udělat?</label>
+                        <input type="text" id="input-qt-text" placeholder="Např. Cvičit 20 min">
+                        
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Kategorie</label>
+                        <select id="input-qt-cat">
+                            <option value="škola">Škola & Studium</option>
+                            <option value="zdraví">Zdraví & Sport</option>
+                            <option value="osobní">Osobní & Pokoj</option>
+                            <option value="práce">Práce & Finance</option>
+                            <option value="rozvoj">Osobní rozvoj & Mysl</option>
+                        </select>
+
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Den</label>
+                        <select id="input-qt-day"></select>
+                        
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Čas (Od - Do)</label>
+                        <input type="text" id="input-qt-time" value="16:00 - 16:30" placeholder="16:00 - 16:30">
+                        
+                        <button class="btn-primary-big" onclick="saveQuickTask()">Přidat úkol</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="block-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="block-modal-title">🏫 Pevný blok rozvrhu</h2>
+                    <span class="close-btn" onclick="closeBlockModal()">&times;</span>
+                </div>
+                <div class="ritual-layout">
+                    <div class="ritual-form">
+                        <input type="hidden" id="input-block-id" value="">
+                        
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold;">Název bloku</label>
+                        <input type="text" id="input-block-title" placeholder="Např. Škola">
+                        
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Čas (Od - Do)</label>
+                        <input type="text" id="input-block-time" placeholder="08:00 - 14:00">
+                        
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Kategorie</label>
+                        <select id="input-block-cat">
+                            <option value="škola">Škola & Studium</option>
+                            <option value="zdraví">Zdraví & Sport</option>
+                            <option value="osobní">Osobní & Pokoj</option>
+                            <option value="práce">Práce & Finance</option>
+                            <option value="rozvoj">Osobní rozvoj & Mysl</option>
+                        </select>
+
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Dny v týdnu:</label>
+                        <div class="days-checkbox-group" style="display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap;">
+                            <label><input type="checkbox" name="block-day" value="1"> Po</label>
+                            <label><input type="checkbox" name="block-day" value="2"> Út</label>
+                            <label><input type="checkbox" name="block-day" value="3"> St</label>
+                            <label><input type="checkbox" name="block-day" value="4"> Čt</label>
+                            <label><input type="checkbox" name="block-day" value="5"> Pá</label>
+                            <label><input type="checkbox" name="block-day" value="6"> So</label>
+                            <label><input type="checkbox" name="block-day" value="0"> Ne</label>
+                        </div>
+                        <button class="btn-primary-big" onclick="saveNewBlock()">Uložit blok</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sunday-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🌟 Nedělní nastavení</h2>
+                    <span id="modal-close-icon" class="close-btn" onclick="closeSundayModal()">&times;</span>
+                </div>
+                <p class="modal-desc">Rozklikni kategorie, vyber si výzvy nebo si napiš vlastní!</p>
+                <div class="ritual-layout">
+                    <div class="ritual-form">
+                        <div id="ritual-categories-options"></div>
+                        <button class="btn-primary-big" onclick="saveWeeklyPlan()">🚀 Vygenerovat mise</button>
+                        <button class="btn-small" style="width: 100%; margin-top: 8px; background: #334155;" onclick="autoGeneratePlan()">⚡ Vybrat za mě</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SPODNÍ NAVIGACE -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="dnes">
+                <i class="fa-solid fa-sun"></i>
+                <span>Dnes</span>
+            </button>
+            <button class="nav-item" data-tab="tyden">
+                <i class="fa-solid fa-calendar-week"></i>
+                <span>Týden</span>
+            </button>
+            <button class="nav-item" data-tab="cile">
+                <i class="fa-solid fa-bullseye"></i>
+                <span>Cíle & Rozvrh</span>
+            </button>
+            <button class="nav-item" data-tab="statistiky">
+                <i class="fa-solid fa-chart-line"></i>
+                <span>Statistiky</span>
+            </button>
+            <button class="nav-item" data-tab="profil">
+                <i class="fa-solid fa-user"></i>
+                <span>Profil</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
