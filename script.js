@@ -69,10 +69,10 @@ const motivationalQuotes = [
     "„Tvoje budoucnost je tvořena tím, co děláš dnes, ne zítra.“"
 ];
 
-let appData = JSON.parse(localStorage.getItem("intrPlanDataV35")) || {
+let appData = JSON.parse(localStorage.getItem("intrPlanDataV40")) || {
     fixedBlocks: [
-        { id: 1, title: "🏫 Dopolední škola", time: "07:45 - 13:05", cat: "škola", days: [1,2,3,4,5] },
-        { id: 2, title: "📖 Studijní klid na intru", time: "18:00 - 19:00", cat: "škola", days: [1,2,3,4] }
+        { id: 1, title: "🏫 Dopolední škola", time: "07:45 - 13:05", cats: ["škola"], days: [1,2,3,4,5] },
+        { id: 2, title: "📖 Studijní klid na intru", time: "18:00 - 19:00", cats: ["none"], days: [1,2,3,4] }
     ],
     weeklyGoals: {},
     longTermGoals: [],
@@ -86,7 +86,8 @@ let appData = JSON.parse(localStorage.getItem("intrPlanDataV35")) || {
     profileName: "Student na intru",
     profileRole: "3. ročník",
     customMotto: "",
-    customWeeklyOptions: { zdraví: [], škola: [], osobní: [], práce: [], rozvoj: [] }
+    customWeeklyOptions: { zdraví: [], škola: [], osobní: [], práce: [], rozvoj: [] },
+    apiKey: ""
 };
 
 function getTodayString() {
@@ -139,7 +140,7 @@ window.toggleSickDay = function() {
     if (!appData.sickDays) appData.sickDays = {};
     appData.sickDays[todayStr] = !appData.sickDays[todayStr];
     
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     initApp();
 };
 
@@ -156,13 +157,13 @@ window.applyPreset = function(type) {
 
     if (type === 'domu') {
         presetTasks = [
-            { id: 991, time: "14:00 - 15:00", cat: "osobní", text: "🎒 Sbalit si věci na víkend domů", completed: false, fixed: true, duration: 60 },
-            { id: 992, time: "15:00 - 16:30", cat: "osobní", text: "🚆 Cesta domů", completed: false, fixed: true, duration: 90 }
+            { id: 991, time: "14:00 - 15:00", cats: ["osobní"], text: "🎒 Sbalit si věci na víkend domů", completed: false, fixed: true, duration: 60 },
+            { id: 992, time: "15:00 - 16:30", cats: ["osobní"], text: "🚆 Cesta domů", completed: false, fixed: true, duration: 90 }
         ];
     } else if (type === 'volno') {
         presetTasks = [
-            { id: 993, time: "10:00 - 11:00", cat: "zdraví", text: "🧘 Ranní protažení a klidné snídaně", completed: false, fixed: true, duration: 60 },
-            { id: 994, time: "14:00 - 16:00", cat: "osobní", text: "🎮 Čas na koníčky a relax", completed: false, fixed: true, duration: 120 }
+            { id: 993, time: "10:00 - 11:00", cats: ["zdraví"], text: "🧘 Ranní protažení a klidné snídaně", completed: false, fixed: true, duration: 60 },
+            { id: 994, time: "14:00 - 16:00", cats: ["osobní"], text: "🎮 Čas na koníčky a relax", completed: false, fixed: true, duration: 120 }
         ];
     } else if (type === 'intrak') {
         generateDistributedSchedule();
@@ -173,7 +174,7 @@ window.applyPreset = function(type) {
     }
 
     appData.masterPlan[todayStr] = presetTasks;
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     closeDayPresetModal();
     renderAgenda();
     alert("Šablona dne byla úspěšně nahrána!");
@@ -184,7 +185,7 @@ window.saveProfileSettings = function() {
     appData.profileRole = document.getElementById("profile-input-role").value || "";
     appData.customMotto = document.getElementById("profile-input-motto").value || "";
     
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     alert("Profil byl úspěšně uložen!");
     initApp();
 };
@@ -207,7 +208,7 @@ window.importData = function(event) {
             try {
                 const parsed = JSON.parse(e.target.result);
                 appData = parsed;
-                localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+                localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
                 alert("Data byla úspěšně importována!");
                 location.reload();
             } catch (err) {
@@ -235,7 +236,8 @@ navItems.forEach(item => {
             document.getElementById("profile-input-name").value = appData.profileName || "";
             document.getElementById("profile-input-role").value = appData.profileRole || "";
             document.getElementById("profile-input-motto").value = appData.customMotto || "";
-            
+            document.getElementById("profile-input-apikey").value = appData.apiKey || "";
+
             updateCategoryAndMinutesStats();
             const totalDoneAll = Object.values(appData.history).reduce((a,b)=>a+b,0);
             document.getElementById("profile-total-done").textContent = totalDoneAll;
@@ -245,7 +247,6 @@ navItems.forEach(item => {
     });
 });
 
-// Generování úkolů – rozpozná frekvenci pro rozvrh, ale z textu ji pro zobrazení odstraní
 function getGeneratedTasksForDay(dayOfWeek, dateStr) {
     let tasks = [];
     let counter = 1;
@@ -254,7 +255,8 @@ function getGeneratedTasksForDay(dayOfWeek, dateStr) {
         if (appData.fixedBlocks) {
             appData.fixedBlocks.forEach(b => {
                 if (!b.days || b.days.length === 0 || b.days.includes(dayOfWeek)) {
-                    tasks.push({ id: counter++, time: b.time, cat: b.cat, text: b.title, completed: false, fixed: true, duration: 30 });
+                    let catsArr = b.cats || (b.cat ? [b.cat] : ["none"]);
+                    tasks.push({ id: counter++, time: b.time, cats: catsArr, text: b.title, completed: true, fixed: true, duration: 0 });
                 }
             });
         }
@@ -305,8 +307,8 @@ function getGeneratedTasksForDay(dayOfWeek, dateStr) {
                         startTime = "14:00";
                         endTimeMin = 14 * 60 + duration;
                     } else if (g.cat === 'škola') {
-                        startTime = "19:00";
-                        endTimeMin = 19 * 60 + duration;
+                        startTime = "18:00";
+                        endTimeMin = 18 * 60 + duration;
                     } else if (g.cat === 'osobní') {
                         startTime = "15:00";
                         endTimeMin = 15 * 60 + duration;
@@ -324,7 +326,6 @@ function getGeneratedTasksForDay(dayOfWeek, dateStr) {
                     const endMinute = String(endTimeMin % 60).padStart(2, '0');
                     const timeStr = `${startTime} - ${endHour}:${endMinute}`;
 
-                    // Očištění textu pro denní a týdenní přehled (odstraní frekvence na začátku)
                     let cleanText = g.text
                         .replace(/^\d+x\s*týdně\s*/i, '')
                         .replace(/^každý\s*den\s*/i, '')
@@ -333,7 +334,7 @@ function getGeneratedTasksForDay(dayOfWeek, dateStr) {
                     tasks.push({ 
                         id: counter++, 
                         time: timeStr, 
-                        cat: g.cat, 
+                        cats: [g.cat], 
                         text: `🎯 ${cleanText}`, 
                         completed: false, 
                         fixed: false,
@@ -343,12 +344,12 @@ function getGeneratedTasksForDay(dayOfWeek, dateStr) {
             });
         }
     } else {
-        tasks.push({ id: 999, time: "Celý den", cat: "zdraví", text: "🛌 Klidový režim / Zotavení z nemoci", completed: true, fixed: true, duration: 0 });
+        tasks.push({ id: 999, time: "Celý den", cats: ["zdraví"], text: "🛌 Klidový režim / Zotavení z nemoci", completed: true, fixed: true, duration: 0 });
     }
 
     if (appData.quickTasks && appData.quickTasks[dateStr]) {
         appData.quickTasks[dateStr].forEach(qt => {
-            tasks.push({ id: qt.id, time: qt.time, cat: qt.cat || 'osobní', text: `⚡ ${qt.text}`, completed: qt.completed, fixed: false, duration: 30 });
+            tasks.push({ id: qt.id, time: qt.time, cats: [qt.cat || 'osobní'], text: `⚡ ${qt.text}`, completed: qt.completed, fixed: false, duration: 30 });
         });
     }
 
@@ -366,7 +367,7 @@ function generateDistributedSchedule() {
         const oldTasks = appData.masterPlan[todayStr];
         tasks.forEach(t => {
             const found = oldTasks.find(o => o.text === t.text && o.time === t.time);
-            if (found) t.completed = found.completed;
+            if (found && !t.fixed) t.completed = found.completed;
         });
     }
 
@@ -381,7 +382,8 @@ function renderAgenda() {
     if (!appData.masterPlan[todayStr]) generateDistributedSchedule();
 
     const tasks = appData.masterPlan[todayStr] || [];
-    let completedCount = tasks.filter(t => t.completed).length;
+    let actionableTasks = tasks.filter(t => !t.fixed);
+    let completedCount = actionableTasks.filter(t => t.completed).length;
 
     const groups = {};
     tasks.forEach(t => {
@@ -400,21 +402,38 @@ function renderAgenda() {
         itemsHtml += `<div class="time-slot-items ${isDual ? 'grid-dual' : ''}">`;
 
         groupTasks.forEach(item => {
-            const cat = categories[item.cat] || { name: item.cat, color: "#3b82f6", icon: "fa-circle" };
-            itemsHtml += `
-                <div class="agenda-card ${item.completed ? 'completed' : ''}" style="border-left-color: ${cat.color}">
-                    <div class="agenda-card-top">
-                        <span style="color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i> ${cat.name}</span>
-                        <div style="display: flex; gap: 4px;">
-                            <button class="btn-small" style="background: #334155; padding: 2px 6px; font-size: 0.65rem;" onclick="postponeTask(${item.id})" title="Odložit na zítra">➡️</button>
-                            <button class="btn-small" style="background: ${item.completed ? '#10b981' : '#334155'}; padding: 2px 6px; font-size: 0.65rem;" onclick="toggleTask(${item.id})">
-                                ${item.completed ? '✓' : '☐'}
-                            </button>
+            let primaryCatKey = (item.cats && item.cats.length > 0) ? item.cats[0] : 'none';
+            const cat = categories[primaryCatKey] || { name: 'Harmonogram', color: '#64748b', icon: "fa-calendar-days" };
+            
+            if (item.fixed) {
+                let badgeText = item.cats && item.cats.includes('none') ? 'Harmonogram' : item.cats.map(c => categories[c]?.name || c).join(', ');
+                let badgeColor = item.cats && item.cats.includes('none') ? '#64748b' : cat.color;
+
+                itemsHtml += `
+                    <div class="agenda-card" style="border-left-color: ${badgeColor}; background: #0f172a; opacity: 0.9;">
+                        <div class="agenda-card-top">
+                            <span style="color: ${badgeColor}"><i class="fa-solid ${primaryCatKey === 'none' ? 'fa-calendar-days' : cat.icon}"></i> ${badgeText}</span>
+                            <span style="font-size: 0.7rem; color: #94a3b8; font-weight: bold;">Pevný blok</span>
                         </div>
+                        <div class="agenda-card-title" style="color: #f1f5f9; font-weight: 600;">${item.text}</div>
                     </div>
-                    <div class="agenda-card-title">${item.text}</div>
-                </div>
-            `;
+                `;
+            } else {
+                itemsHtml += `
+                    <div class="agenda-card ${item.completed ? 'completed' : ''}" style="border-left-color: ${cat.color}">
+                        <div class="agenda-card-top">
+                            <span style="color: ${cat.color}"><i class="fa-solid ${cat.icon}"></i> ${cat.name}</span>
+                            <div style="display: flex; gap: 4px;">
+                                <button class="btn-small" style="background: #334155; padding: 2px 6px; font-size: 0.65rem;" onclick="postponeTask(${item.id})" title="Odložit na zítra">➡️</button>
+                                <button class="btn-small" style="background: ${item.completed ? '#10b981' : '#334155'}; padding: 2px 6px; font-size: 0.65rem;" onclick="toggleTask(${item.id})">
+                                    ${item.completed ? '✓' : '☐'}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="agenda-card-title">${item.text}</div>
+                    </div>
+                `;
+            }
         });
         itemsHtml += `</div>`;
         groupDiv.innerHTML = itemsHtml;
@@ -423,9 +442,9 @@ function renderAgenda() {
 
     appData.history[todayStr] = completedCount;
     updateCategoryAndMinutesStats();
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
 
-    document.getElementById("missions-status-text").textContent = `Splněno úkolů: ${completedCount} / ${tasks.length}`;
+    document.getElementById("missions-status-text").textContent = `Splněno úkolů: ${completedCount} / ${actionableTasks.length}`;
     const totalDoneAll = Object.values(appData.history).reduce((a,b)=>a+b,0);
     document.getElementById("global-streak").textContent = `🔥 ${totalDoneAll} SPLNĚNÝCH`;
 }
@@ -439,6 +458,8 @@ window.postponeTask = function(id) {
     if (taskIndex === -1) return;
 
     const taskToMove = tasks[taskIndex];
+    if (taskToMove.fixed) return;
+
     tasks.splice(taskIndex, 1);
 
     const tomorrow = new Date();
@@ -449,12 +470,12 @@ window.postponeTask = function(id) {
     appData.quickTasks[tomorrowStr].push({
         id: Date.now(),
         text: taskToMove.text.replace(/^[🎯⚡]\s*/, ''),
-        cat: taskToMove.cat,
+        cat: taskToMove.cats ? taskToMove.cats[0] : 'osobní',
         time: taskToMove.time,
         completed: false
     });
 
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     renderAgenda();
     alert("Úkol byl úspěšně odložen na zítra!");
 };
@@ -465,8 +486,9 @@ function updateCategoryAndMinutesStats() {
 
     Object.keys(appData.masterPlan).forEach(dateStr => {
         (appData.masterPlan[dateStr] || []).forEach(t => {
-            if (t.completed) {
-                if (catCounts[t.cat] !== undefined) catCounts[t.cat]++;
+            if (t.completed && !t.fixed && t.cats && t.cats.length > 0) {
+                let cKey = t.cats[0];
+                if (catCounts[cKey] !== undefined) catCounts[cKey]++;
                 totalMins += (t.duration !== undefined ? t.duration : 30);
             }
         });
@@ -513,7 +535,8 @@ function renderWeekView() {
             tasksHtml += `<span style="font-size: 0.75rem; color: #64748b;">Žádné úkoly ani bloky</span>`;
         } else {
             dayTasks.forEach(t => {
-                const cat = categories[t.cat] || { color: "#3b82f6" };
+                let cKey = (t.cats && t.cats.length > 0) ? t.cats[0] : 'none';
+                const cat = categories[cKey] || { color: cKey === 'none' ? '#64748b' : '#3b82f6' };
                 tasksHtml += `
                     <div style="background: #0f172a; padding: 8px; border-radius: 8px; border-left: 3px solid ${cat.color}; font-size: 0.8rem; margin-bottom: 4px;">
                         <span style="color: #38bdf8; font-size: 0.7rem; font-weight: bold; display: block;">${t.time}</span>
@@ -540,9 +563,9 @@ window.toggleTask = function(id) {
     const tasks = appData.masterPlan[todayStr];
     if (tasks) {
         const task = tasks.find(t => t.id === id);
-        if (task) task.completed = !task.completed;
+        if (task && !task.fixed) task.completed = !task.completed;
     }
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     renderAgenda();
 };
 
@@ -570,7 +593,7 @@ window.saveQuickTask = function() {
     if (!appData.quickTasks[targetDate]) appData.quickTasks[targetDate] = [];
     appData.quickTasks[targetDate].push({ id: Date.now(), text, cat, time, completed: false });
 
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     closeQuickTaskModal();
     generateDistributedSchedule();
     renderAgenda();
@@ -581,6 +604,8 @@ window.openBlockModal = function(id = null) {
     document.getElementById("input-block-title").value = "";
     document.getElementById("input-block-time").value = "";
     document.getElementById("block-modal-title").textContent = "🏫 Pevný blok rozvrhu";
+    
+    document.querySelectorAll('input[name="block-cat"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('input[name="block-day"]').forEach(cb => cb.checked = true);
 
     if (id) {
@@ -589,8 +614,13 @@ window.openBlockModal = function(id = null) {
             document.getElementById("input-block-id").value = block.id;
             document.getElementById("input-block-title").value = block.title;
             document.getElementById("input-block-time").value = block.time;
-            document.getElementById("input-block-cat").value = block.cat;
             document.getElementById("block-modal-title").textContent = "✏️ Upravit pevný blok";
+            
+            let currentCats = block.cats || (block.cat ? [block.cat] : []);
+            document.querySelectorAll('input[name="block-cat"]').forEach(cb => {
+                cb.checked = currentCats.includes(cb.value);
+            });
+
             document.querySelectorAll('input[name="block-day"]').forEach(cb => {
                 cb.checked = block.days.includes(parseInt(cb.value));
             });
@@ -604,7 +634,11 @@ window.saveNewBlock = function() {
     const id = document.getElementById("input-block-id").value;
     const title = document.getElementById("input-block-title").value;
     const time = document.getElementById("input-block-time").value;
-    const cat = document.getElementById("input-block-cat").value;
+    
+    const selectedCats = [];
+    document.querySelectorAll('input[name="block-cat"]:checked').forEach(cb => selectedCats.push(cb.value));
+    if (selectedCats.length === 0) selectedCats.push("none");
+
     const selectedDays = [];
     document.querySelectorAll('input[name="block-day"]:checked').forEach(cb => selectedDays.push(parseInt(cb.value)));
 
@@ -612,12 +646,12 @@ window.saveNewBlock = function() {
 
     if (id) {
         const block = appData.fixedBlocks.find(b => b.id == id);
-        if (block) { block.title = title; block.time = time; block.cat = cat; block.days = selectedDays; }
+        if (block) { block.title = title; block.time = time; block.cats = selectedCats; block.days = selectedDays; delete block.cat; }
     } else {
-        appData.fixedBlocks.push({ id: Date.now(), title, time, cat, days: selectedDays });
+        appData.fixedBlocks.push({ id: Date.now(), title, time, cats: selectedCats, days: selectedDays });
     }
 
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     closeBlockModal();
     renderBlocksAndVision();
     generateDistributedSchedule();
@@ -626,7 +660,7 @@ window.saveNewBlock = function() {
 
 window.deleteBlock = function(id) {
     appData.fixedBlocks = appData.fixedBlocks.filter(b => b.id !== id);
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     renderBlocksAndVision();
     generateDistributedSchedule();
     renderAgenda();
@@ -695,7 +729,7 @@ window.addCustomOption = function(catKey) {
     if (!appData.weeklyGoals[catKey]) appData.weeklyGoals[catKey] = [];
     appData.weeklyGoals[catKey].push(val);
 
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     renderSundayModalContent();
 };
 
@@ -710,8 +744,42 @@ window.saveWeeklyPlan = function() {
     });
     appData.weeklyGoals = newWeeklyGoals;
     generateDistributedSchedule();
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     document.getElementById("sunday-modal").classList.add("hidden");
+    window.testAIConnection = async function() {
+    const key = document.getElementById("profile-input-apikey").value.trim();
+    if (!key) {
+        alert("Nejprve musíš vložit API klíč!");
+        return;
+    }
+    
+    try {
+        alert("⏳ Připojuji se k AI... (může to chvíli trvat)");
+        
+        // Zde voláme Google Gemini 1.5 Flash
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Napiš mi jednu velmi krátkou motivační větu pro studenta střední školy, který bydlí na intru." }] }]
+            })
+        });
+        
+        if (!response.ok) throw new Error("Chyba API. Zkontroluj, zda je klíč správný.");
+        
+        const data = await response.json();
+        const aiText = data.candidates[0].content.parts[0].text;
+        
+        alert("✅ AI ÚSPĚŠNĚ ODPOVÍDÁ:\n\n" + aiText);
+        
+        // Pokud to prošlo, klíč uložíme
+        appData.apiKey = key;
+        localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
+        
+    } catch (error) {
+        alert("❌ Připojení selhalo: " + error.message);
+    }
+};
     initApp();
 };
 
@@ -723,7 +791,7 @@ window.autoGeneratePlan = function() {
     });
     appData.weeklyGoals = randomGoals;
     generateDistributedSchedule();
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     document.getElementById("sunday-modal").classList.add("hidden");
     initApp();
 };
@@ -742,7 +810,7 @@ window.saveLongTermGoal = function() {
     if (!title) return;
 
     appData.longTermGoals.push({ id: Date.now(), title, cat, deadline, completed: false });
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     closeLongTermModal();
     renderBlocksAndVision();
 };
@@ -756,14 +824,14 @@ window.toggleLongTerm = function(id) {
             appData.completedVisions.push({ ...goal, completedDate: new Date().toLocaleDateString('cs-CS') });
             appData.longTermGoals = appData.longTermGoals.filter(g => g.id !== id);
         }
-        localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+        localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
         renderBlocksAndVision();
     }
 };
 
 window.deleteLongTerm = function(id) {
     appData.longTermGoals = appData.longTermGoals.filter(g => g.id !== id);
-    localStorage.setItem("intrPlanDataV35", JSON.stringify(appData));
+    localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     renderBlocksAndVision();
 };
 
@@ -812,13 +880,16 @@ function renderBlocksAndVision() {
     const blocksContainer = document.getElementById("blocks-list-container");
     blocksContainer.innerHTML = "";
     appData.fixedBlocks.forEach(b => {
-        const cat = categories[b.cat] || { color: "#3b82f6" };
+        let catsArr = b.cats || (b.cat ? [b.cat] : ["none"]);
+        let badgeNames = catsArr.includes("none") ? "Žádná (Čistý harmonogram)" : catsArr.map(c => categories[c]?.name || c).join(", ");
+        let badgeColor = catsArr.includes("none") ? "#64748b" : (categories[catsArr[0]]?.color || "#3b82f6");
         const daysStr = b.days ? b.days.map(d => daysMap[d]).join(", ") : "Každý den";
+        
         blocksContainer.innerHTML += `
-            <div class="stat-box-long" style="border-left: 4px solid ${cat.color}; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 14px;">
+            <div class="stat-box-long" style="border-left: 4px solid ${badgeColor}; flex-direction: row; justify-content: space-between; align-items: center; padding: 10px 14px;">
                 <div>
-                    <strong style="color: ${cat.color}; font-size: 0.9rem;">${b.title}</strong>
-                    <span style="color: #94a3b8; font-size: 0.75rem; display: block;">🕒 ${b.time} | 📅 ${daysStr}</span>
+                    <strong style="color: ${badgeColor}; font-size: 0.9rem;">${b.title}</strong>
+                    <span style="color: #94a3b8; font-size: 0.75rem; display: block;">🕒 ${b.time} | 📂 Zaměření: ${badgeNames} | 📅 ${daysStr}</span>
                 </div>
                 <div style="display: flex; gap: 4px;">
                     <button class="btn-small" style="background: #3b82f6;" onclick="openBlockModal(${b.id})"><i class="fa-solid fa-pen"></i></button>
@@ -917,7 +988,7 @@ function renderStats() {
 
 window.resetAllData = function() {
     if (confirm("Opravdu chceš smazat všechna data?")) {
-        localStorage.removeItem("intrPlanDataV35");
+        localStorage.removeItem("intrPlanDataV40");
         location.reload();
     }
 };
