@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
@@ -134,8 +135,18 @@
                             📤 Import dat <input type="file" id="import-file-input" style="display: none;" onchange="importData(event)">
                         </label>
                     </div>
+
                 </div>
 
+                <div class="stat-box-long" style="margin-top: 12px; background: #172033; border: 1px solid #334155;">
+                    <strong style="color: #38bdf8; margin-bottom: 6px; display: block;"><i class="fa-solid fa-robot"></i> Nastavení umělé inteligence (AI)</strong>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin-bottom: 8px;">Vlož svůj Google Gemini API klíč pro chytré generování plánů.</p>
+    
+                    <input type="password" id="profile-input-apikey" placeholder="Vlož svůj API klíč..." style="width: 100%; background: #0f172a; border: 1px solid #334155; color: white; padding: 8px; border-radius: 6px; margin-top: 2px; margin-bottom: 8px; font-size: 0.85rem;">
+    
+                    <button class="btn-small" style="width: 100%; background: #10b981;" onclick="testAIConnection()">🤖 Otestovat spojení s AI</button>
+                </div>
+                
                 <button class="btn-primary-big" style="background: #3b82f6; margin-top: 15px;" onclick="openSundayModal(false)">Spustit nedělní nastavení</button>
                 <button class="btn-complete" style="margin-top: 10px; background: #ef4444;" onclick="resetAllData()">Smazat vše a restartovat</button>
             </section>
@@ -235,14 +246,27 @@
                         <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Čas (Od - Do)</label>
                         <input type="text" id="input-block-time" placeholder="08:00 - 14:00">
                         
-                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Kategorie</label>
-                        <select id="input-block-cat">
-                            <option value="škola">Škola & Studium</option>
-                            <option value="zdraví">Zdraví & Sport</option>
-                            <option value="osobní">Osobní & Pokoj</option>
-                            <option value="práce">Práce & Finance</option>
-                            <option value="rozvoj">Osobní rozvoj & Mysl</option>
-                        </select>
+                        <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Zaměření (kategorie bloku):</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px; background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; margin-top: 6px;">
+                            <label style="font-size: 0.85rem; color: #94a3b8; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="block-cat" value="none" style="width: 16px; height: 16px; accent-color: #38bdf8;"> Žádná kategorie (čistý harmonogram)
+                            </label>
+                            <label style="font-size: 0.85rem; color: #10b981; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="block-cat" value="zdraví" style="width: 16px; height: 16px; accent-color: #10b981;"> Zdraví & Sport
+                            </label>
+                            <label style="font-size: 0.85rem; color: #3b82f6; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="block-cat" value="škola" style="width: 16px; height: 16px; accent-color: #3b82f6;"> Škola & Studium
+                            </label>
+                            <label style="font-size: 0.85rem; color: #8b5cf6; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="block-cat" value="osobní" style="width: 16px; height: 16px; accent-color: #8b5cf6;"> Osobní & Pokoj
+                            </label>
+                            <label style="font-size: 0.85rem; color: #f59e0b; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="block-cat" value="práce" style="width: 16px; height: 16px; accent-color: #f59e0b;"> Práce & Finance
+                            </label>
+                            <label style="font-size: 0.85rem; color: #ec4899; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" name="block-cat" value="rozvoj" style="width: 16px; height: 16px; accent-color: #ec4899;"> Osobní rozvoj & Mysl
+                            </label>
+                        </div>
 
                         <label style="font-size: 0.8rem; color: #38bdf8; font-weight: bold; margin-top: 10px; display: block;">Dny v týdnu:</label>
                         <div class="days-checkbox-group" style="display: flex; gap: 6px; margin-top: 5px; flex-wrap: wrap;">
@@ -254,7 +278,7 @@
                             <label><input type="checkbox" name="block-day" value="6"> So</label>
                             <label><input type="checkbox" name="block-day" value="0"> Ne</label>
                         </div>
-                        <button class="btn-primary-big" onclick="saveNewBlock()">Uložit blok</button>
+                        <button class="btn-primary-big" onclick="saveNewBlock()" style="margin-top: 15px;">Uložit blok</button>
                     </div>
                 </div>
             </div>
