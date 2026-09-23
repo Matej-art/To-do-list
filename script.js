@@ -185,6 +185,9 @@ window.saveProfileSettings = function() {
     appData.profileRole = document.getElementById("profile-input-role").value || "";
     appData.customMotto = document.getElementById("profile-input-motto").value || "";
     
+    const apiInput = document.getElementById("profile-input-apikey");
+    if (apiInput) appData.apiKey = apiInput.value.trim() || "";
+    
     localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     alert("Profil byl úspěšně uložen!");
     initApp();
@@ -236,8 +239,10 @@ navItems.forEach(item => {
             document.getElementById("profile-input-name").value = appData.profileName || "";
             document.getElementById("profile-input-role").value = appData.profileRole || "";
             document.getElementById("profile-input-motto").value = appData.customMotto || "";
-            document.getElementById("profile-input-apikey").value = appData.apiKey || "";
-
+            
+            const apiInput = document.getElementById("profile-input-apikey");
+            if (apiInput) apiInput.value = appData.apiKey || "";
+            
             updateCategoryAndMinutesStats();
             const totalDoneAll = Object.values(appData.history).reduce((a,b)=>a+b,0);
             document.getElementById("profile-total-done").textContent = totalDoneAll;
@@ -746,40 +751,6 @@ window.saveWeeklyPlan = function() {
     generateDistributedSchedule();
     localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
     document.getElementById("sunday-modal").classList.add("hidden");
-    window.testAIConnection = async function() {
-    const key = document.getElementById("profile-input-apikey").value.trim();
-    if (!key) {
-        alert("Nejprve musíš vložit API klíč!");
-        return;
-    }
-    
-    try {
-        alert("⏳ Připojuji se k AI... (může to chvíli trvat)");
-        
-        // Zde voláme Google Gemini 1.5 Flash
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: "Napiš mi jednu velmi krátkou motivační větu pro studenta střední školy, který bydlí na intru." }] }]
-            })
-        });
-        
-        if (!response.ok) throw new Error("Chyba API. Zkontroluj, zda je klíč správný.");
-        
-        const data = await response.json();
-        const aiText = data.candidates[0].content.parts[0].text;
-        
-        alert("✅ AI ÚSPĚŠNĚ ODPOVÍDÁ:\n\n" + aiText);
-        
-        // Pokud to prošlo, klíč uložíme
-        appData.apiKey = key;
-        localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
-        
-    } catch (error) {
-        alert("❌ Připojení selhalo: " + error.message);
-    }
-};
     initApp();
 };
 
@@ -990,6 +961,50 @@ window.resetAllData = function() {
     if (confirm("Opravdu chceš smazat všechna data?")) {
         localStorage.removeItem("intrPlanDataV40");
         location.reload();
+    }
+};
+
+// 🤖 FUNKCE PRO AI SPOJENÍ
+window.testAIConnection = async function() {
+    const key = document.getElementById("profile-input-apikey").value.trim();
+    if (!key) {
+        alert("Nejprve musíš vložit API klíč!");
+        return;
+    }
+
+    try {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "⏳ Připojuji se...";
+        btn.disabled = true;
+
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: "Napiš mi jednu velmi krátkou (max 1 věta) motivační větu pro studenta střední školy, který bydlí na intru." }] }]
+            })
+        });
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (!response.ok) {
+            throw new Error("Neplatný klíč nebo chyba sítě.");
+        }
+
+        const data = await response.json();
+        const aiText = data.candidates[0].content.parts[0].text;
+
+        alert("✅ AI ÚSPĚŠNĚ ODPOVÍDÁ:\n\n" + aiText);
+
+        appData.apiKey = key;
+        localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
+
+    } catch (error) {
+        const btn = document.querySelector('button[onclick="testAIConnection()"]');
+        if (btn) { btn.innerHTML = "🤖 Otestovat spojení s AI"; btn.disabled = false; }
+        alert("❌ Připojení selhalo: " + error.message);
     }
 };
 
