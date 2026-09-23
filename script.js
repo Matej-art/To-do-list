@@ -973,38 +973,36 @@ window.testAIConnection = async function() {
     }
 
     try {
-        const btn = event.target;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = "⏳ Připojuji se...";
-        btn.disabled = true;
+        alert("⏳ Připojuji se k AI...");
 
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: "Napiš mi jednu velmi krátkou (max 1 věta) motivační větu pro studenta střední školy, který bydlí na intru." }] }]
+                contents: [{ parts: [{ text: "Napiš mi jednu krátkou motivační větu pro studenta." }] }]
             })
         });
 
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        const data = await response.json();
 
         if (!response.ok) {
-            throw new Error("Neplatný klíč nebo chyba sítě.");
+            throw new Error(data.error?.message || "Neznámá chyba serveru");
         }
 
-        const data = await response.json();
-        const aiText = data.candidates[0].content.parts[0].text;
-
-        alert("✅ AI ÚSPĚŠNĚ ODPOVÍDÁ:\n\n" + aiText);
-
-        appData.apiKey = key;
-        localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
+        if (data.candidates && data.candidates[0].content.parts[0].text) {
+            const aiText = data.candidates[0].content.parts[0].text;
+            alert("✅ AI ÚSPĚŠNĚ ODPOVÍDÁ:\n\n" + aiText);
+            
+            appData.apiKey = key;
+            localStorage.setItem("intrPlanDataV40", JSON.stringify(appData));
+        } else {
+            throw5 = new Error("Neočekávaná odpověď od AI.");
+        }
 
     } catch (error) {
-        const btn = document.querySelector('button[onclick="testAIConnection()"]');
-        if (btn) { btn.innerHTML = "🤖 Otestovat spojení s AI"; btn.disabled = false; }
-        alert("❌ Připojení selhalo: " + error.message);
+        alert("❌ Chyba připojení: " + error.message);
     }
 };
 
